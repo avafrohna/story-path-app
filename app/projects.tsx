@@ -2,8 +2,16 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { getProjects } from '../api';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { Stack } from 'expo-router';
-import ProjectDetails from '../components/project/projectdetails';
+import ProjectDetailsTabs from '@/components/project/projectdetailstabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+
+type RootStackParamList = {
+  Projects: undefined;
+  ProjectDetails: { projectId: string };
+};
+
+type ProjectsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Projects'>;
 
 type Project = {
   id: string;
@@ -13,11 +21,12 @@ type Project = {
   is_published: boolean;
   instructions: string;
   initial_clue: string;
-  participant_scoring: string,
-  homescreen_display: string,
+  participant_scoring: string;
+  homescreen_display: string;
 };
 
 export default function Projects() {
+  const navigation = useNavigation<ProjectsScreenNavigationProp>();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,8 +48,14 @@ export default function Projects() {
     };
 
     fetchProjects();
-  }, []);
-  
+
+    const unsubscribe = navigation.addListener('focus', () => {
+      setSelectedProjectId('');
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   const renderItem = ({ item }: { item: Project }) => (
     <TouchableOpacity
       style={styles.projectContainer}
@@ -61,9 +76,8 @@ export default function Projects() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Projects' }} />
       {selectedProjectId ? (
-        <ProjectDetails projectId={selectedProjectId} />
+        <ProjectDetailsTabs projectId={selectedProjectId} />
       ) : (
         <>
           <Text style={styles.title}>Published Projects</Text>

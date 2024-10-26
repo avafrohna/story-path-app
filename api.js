@@ -89,5 +89,3 @@ export async function getLocations() {
 export async function getLocation(id) {
   return await apiRequest(`/location?id=eq.${id}`);
 }
-
-

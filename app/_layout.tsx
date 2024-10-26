@@ -46,14 +46,23 @@ export default function Layout() {
               ),
             }} 
           />
-          <Drawer.Screen 
-            name="projects" 
-            options={{ 
-              title: "Projects", 
+          <Drawer.Screen
+            name="projects"
+            options={{
+              title: "Projects",
               drawerIcon: ({ color, size }) => (
                 <MaterialIcons name="work" color={color} size={size} />
               ),
-            }} 
+            }}
+            listeners={({ navigation }) => ({
+              drawerItemPress: (e) => {
+                e.preventDefault();
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: "projects" }],
+                });
+              },
+            })}
           />
           <Drawer.Screen 
             name="about" 

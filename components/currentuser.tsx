@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useUser } from './usercontext';
 import { DrawerContentScrollView, DrawerItemList, DrawerContentComponentProps } from '@react-navigation/drawer';
 
-export default function CustomDrawerContent(props: DrawerContentComponentProps) {
+export default function UserContent(props: DrawerContentComponentProps) {
   const { username } = useUser();
 
   return (

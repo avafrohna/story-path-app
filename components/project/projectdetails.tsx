@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { getProject } from '../../api';
 import { useRouter } from 'expo-router';
 
@@ -7,12 +7,11 @@ type Project = {
   id: string;
   title: string;
   description: string;
-  participantsCount: number;
   is_published: boolean;
   instructions: string;
   initial_clue: string;
-  participant_scoring: string,
-  homescreen_display: string,
+  participant_scoring: string;
+  homescreen_display: string;
 };
 
 type ProjectDetailsProps = {
@@ -29,7 +28,7 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
     const fetchProject = async () => {
       try {
         setLoading(true);
-        const projectData: Project[] = await getProject(projectId);
+        const projectData = await getProject(projectId) as Project[];
         setProject(projectData[0]);
         setLoading(false);
       } 
@@ -81,18 +80,6 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
           </View>
         </View>
       </View>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push('/map')}
-      >
-        <Text style={styles.buttonText}>MAP</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push('/qrcode')}
-      >
-        <Text style={styles.buttonText}>QR CODE SCANNER</Text>
-      </TouchableOpacity>
     </View>
   );
 }
