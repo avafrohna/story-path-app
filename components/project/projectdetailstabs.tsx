@@ -43,14 +43,15 @@ export default function ProjectDetailsTabs({ projectId }: ProjectDetailsProps) {
       </Tab.Screen>
       <Tab.Screen
         name="MapScreen"
-        component={MapScreen}
         options={{
           title: "Map",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="map" color={color} size={size} />
           ),
         }}
-      />
+      >
+        {() => <MapScreen projectId={projectId} />}
+      </Tab.Screen>
       <Tab.Screen
         name="QRCodeScanner"
         component={QRCodeScanner}

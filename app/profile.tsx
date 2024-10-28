@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '../components/usercontext';
 
 export default function Profile() {
-  const { username, setUsername } = useUser();
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const { username, setUsername, profilePicture, setProfilePicture } = useUser();
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -23,15 +22,15 @@ export default function Profile() {
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      setProfilePicture(result.assets[0].uri);
     }
   };
 
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.profileImage} />
+        {profilePicture ? (
+          <Image source={{ uri: profilePicture }} style={styles.profileImage} />
         ) : (
           <Text style={styles.imagePickerText}>Select a Profile Image</Text>
         )}
@@ -43,7 +42,6 @@ export default function Profile() {
         value={username || ''}
         onChangeText={setUsername}
       />
-
     </View>
   );
 }

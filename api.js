@@ -35,6 +35,7 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
 
   if (!response.ok) {
+    console.error(`Error response: ${await response.text()}`); // Log error details
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   if (response.status === 204) {
@@ -88,4 +89,43 @@ export async function getLocations() {
  */
 export async function getLocation(id) {
   return await apiRequest(`/location?id=eq.${id}`);
+}
+
+
+/**
+ * Fetch participant count for a specific project by project_id.
+ * @param {string} projectId - The project ID.
+ * @returns {Promise<number>} - The number of unique participants.
+ */
+export async function getProjectParticipantCount(projectId) {
+  try {
+    const response = await apiRequest(`/project_participant_counts?project_id=eq.${projectId}`);
+    return response.length > 0 ? response[0].number_participants : 0;
+  } catch (error) {
+    console.error("Error in getProjectParticipantCount: ", error);
+    return 0; // Return 0 if there's an error
+  }
+}
+
+/**
+ * Track a participant's visit to a location.
+ * @param {string} projectId - The ID of the project.
+ * @param {string} locationId - The ID of the location.
+ * @param {string} participantUsername - The participant's username.
+ * @param {number} points - The number of points earned for this visit.
+ * @returns {Promise<object>} - The response from the tracking endpoint.
+ */
+export async function trackVisit(projectId, locationId, participantUsername, points = 0) {
+  try {
+    const response = await apiRequest('/tracking', 'POST', {
+      project_id: projectId,
+      location_id: locationId,
+      participant_username: participantUsername,
+      points: points,
+    });
+    return response;
+  } catch (error) {
+    console.error("Error in trackVisit: ", error);
+    throw error;
+  }
 }
