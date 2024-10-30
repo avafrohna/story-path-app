@@ -83,6 +83,7 @@ export default function MapScreen({ projectId }: MapScreenProps) {
         const distance = getDistance(userLatitude, userLongitude, latitude, longitude);
   
         if (distance < 4000 && !visitedLocationIds.has(location.id)) {
+          console.log("hello");
           trackVisit(projectId, location.id.toString(), username ?? '', location.score_points)
             .then(() => {
               setVisitedLocationIds(prevVisited => new Set(prevVisited).add(location.id));

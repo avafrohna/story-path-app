@@ -1,10 +1,10 @@
-import { Drawer } from 'expo-router/drawer';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import React from 'react';
-import { Text } from 'react-native';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomDrawerContent from '../components/currentuser';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { Text } from 'react-native';
+import { Drawer } from 'expo-router/drawer';
 import { UserProvider } from '../components/usercontext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function Layout() {
   return (

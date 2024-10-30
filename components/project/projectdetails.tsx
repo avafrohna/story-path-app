@@ -11,7 +11,6 @@ type ProjectDetailsProps = {
 
 type TrackingEntry = {
   participant_username: string;
-  // other properties if applicable
 };
 
 export default function ProjectDetails({ projectId }: ProjectDetailsProps) {

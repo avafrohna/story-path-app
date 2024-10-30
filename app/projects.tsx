@@ -1,24 +1,28 @@
+import { Project } from '@/types/types';
+import { useUser } from '../components/usercontext';
+import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getProjects, getTrackingEntriesForProject } from '../api';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import ProjectDetailsTabs from '@/components/project/projectdetailstabs';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
-import { Project } from '@/types/types';
 
 type RootStackParamList = {
   Projects: undefined;
   ProjectDetails: { projectId: string };
+  profile: undefined;
 };
 
 type ProjectsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Projects'>;
 
 export default function Projects() {
   const navigation = useNavigation<ProjectsScreenNavigationProp>();
+  const { username } = useUser();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [participantCounts, setParticipantCounts] = useState<{ [key: string]: number }>({});
   const [selectedProjectId, setSelectedProjectId] = useState('');
 
   useEffect(() => {
@@ -29,24 +33,29 @@ export default function Projects() {
         const projectsData: Project[] = await getProjects();
         const publishedProjects = projectsData.filter((project) => project.is_published);
 
-        const projectsWithParticipants = await Promise.all(
-          publishedProjects.map(async (project) => {
-            const trackingEntries = (await getTrackingEntriesForProject(project.id)) as { participant_username: string }[];
-            const uniqueParticipants = new Set(trackingEntries.map(entry => entry.participant_username));
-            return {
-              ...project,
-              participantsCount: uniqueParticipants.size,
-            };
-          })
-        );
-
-        setProjects(projectsWithParticipants);
+        setProjects(publishedProjects);
         setLoading(false);
+
+        fetchParticipantCounts(publishedProjects);
       } 
       catch (err) {
         setError(`Error fetching projects: ${(err as Error).message}`);
         setLoading(false);
       }
+    };
+
+    const fetchParticipantCounts = async (projects: Project[]) => {
+      const counts: { [key: string]: number } = {};
+
+      await Promise.all(
+        projects.map(async (project) => {
+          const trackingEntries = (await getTrackingEntriesForProject(project.id)) as { participant_username: string }[];
+          const uniqueParticipants = new Set(trackingEntries.map(entry => entry.participant_username));
+          counts[project.id] = uniqueParticipants.size;
+        })
+      );
+
+      setParticipantCounts(counts);
     };
 
     fetchProjects();
@@ -58,17 +67,37 @@ export default function Projects() {
     return unsubscribe;
   }, [navigation]);
 
+  const handleProjectPress = (projectId: string) => {
+    if (!username) {
+      Alert.alert(
+        "User Login Required",
+        "You must log in or create a profile to view project details.",
+        [
+          {
+            text: "Profile",
+            onPress: () => navigation.navigate("profile")
+          },
+          { text: "Cancel", style: "cancel" },
+        ],
+        { cancelable: true }
+      );
+    } 
+    else {
+      setSelectedProjectId(projectId);
+    }
+  };
+
   const renderItem = ({ item }: { item: Project }) => (
     <TouchableOpacity
       style={styles.projectContainer}
       activeOpacity={0.8}
-      onPress={() => setSelectedProjectId(item.id)}
+      onPress={() => handleProjectPress(item.id)}
     >
       <View style={styles.projectInfo}>
         <Text style={styles.projectTitle}>{item.title}</Text>
         <View style={styles.participantBadge}>
           <Text style={styles.participantBadgeText}>
-            Participants: {item.participantsCount}
+            Participants: {participantCounts[item.id] || 0}
           </Text>
         </View>
       </View>
