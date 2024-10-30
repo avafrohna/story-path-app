@@ -1,32 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
-import { getProject, getLocations } from '../../api';
+import { getProject, getLocations, getTrackingEntries, getAllTrackingEntries, getUserTrackingEntries } from '../../api';
 import RenderHtml from 'react-native-render-html';
-
-type Project = {
-  id: string;
-  title: string;
-  description: string;
-  is_published: boolean;
-  instructions: string;
-  initial_clue: string;
-  participant_scoring: string;
-  homescreen_display: string;
-};
-
-type Location = {
-  id: string;
-  project_id: string;
-  location_name: string;
-  location_content: string;
-  clue: string;
-  score_points: number;
-  location_trigger: string;
-  location_position: string;
-};
+import { useUser } from '../usercontext';
+import { Location, Project } from '@/types/types';
 
 type ProjectDetailsProps = {
   projectId: string;
+};
+
+type TrackingEntry = {
+  participant_username: string;
+  // other properties if applicable
 };
 
 export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
@@ -34,15 +19,23 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [visitCounts, setVisitCounts] = useState<{ [locationId: string]: number }>({});
   const [currentScore, setCurrentScore] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
   const [currentNumLocations, setCurrentNumLocations] = useState(0);
   const { width } = useWindowDimensions();
+  const { username } = useUser();
+  const [visitedLocations, setVisitedLocations] = useState<Location[]>([]);
+  const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
 
   useEffect(() => {
     const fetchProjectData = async () => {
       try {
         setLoading(true);
+
+        const allTrackingEntries = await getAllTrackingEntries();
+        console.log("All tracking entries:", allTrackingEntries);
+
         const projectData = await getProject(projectId) as Project[];
         setProject(projectData[0]);
 
@@ -54,9 +47,24 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
           const score = projectLocations.reduce((acc, loc) => acc + loc.score_points, 0);
           setTotalScore(score);
         }
-        
+
+        const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
+        console.log("User-specific tracking entries:", trackingEntries);
+
+        const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
+        console.log("Visited location IDs:", Array.from(visitedIds));
+
+        const visitedLocations = projectLocations.filter(location => visitedIds.has(location.id));
+        console.log("Filtered visited locations:", visitedLocations);
+
+        setVisitedLocations(visitedLocations);
+        setVisitedLocationIds(visitedIds);
+
+        await fetchVisitCountsForLocations(projectLocations);
+
         setLoading(false);
-      } catch (err) {
+      } 
+      catch (err) {
         setError(`Error fetching project details: ${(err as Error).message}`);
         setLoading(false);
       }
@@ -66,6 +74,32 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
       fetchProjectData();
     }
   }, [projectId]);
+
+  const fetchVisitCountsForLocations = async (locations: Location[]) => {
+    const counts: { [locationId: string]: number } = {};
+
+    await Promise.all(
+      locations.map(async (location) => {
+        try {
+          const trackingEntries = (await getTrackingEntries(projectId, null, location.id)) as TrackingEntry[] || [];
+          
+          console.log(`Tracking entries for location ${location.id}:`, trackingEntries);
+
+          const uniqueParticipants = new Set(trackingEntries.map(entry => entry.participant_username));
+          
+          console.log(`Unique participants for location ${location.id}:`, Array.from(uniqueParticipants));
+
+          counts[location.id] = uniqueParticipants.size;
+        } 
+        catch (error) {
+          console.error(`Error fetching visit count for location ${location.id}:`, error);
+        }
+      })
+    );
+
+    console.log("Final visit counts:", counts);
+    setVisitCounts(counts);
+  };
 
   if (loading) {
     return <ActivityIndicator size="large" color="#81A6C7" />;
@@ -119,21 +153,21 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
             </View>
             <View style={styles.pointsBox}>
               <Text style={styles.pointsTitle}>Locations Visited</Text>
-              <Text style={styles.pointsValue}>{currentNumLocations} / {locations.length}</Text>
+              <Text style={styles.pointsValue}>{visitedLocationIds.size} / {locations.length}</Text>
             </View>
           </View>
         ) : (
           <View style={styles.pointsContainer}>
             <View style={styles.pointsBox}>
               <Text style={styles.pointsTitle}>Locations Visited</Text>
-              <Text style={styles.pointsValue}>{currentNumLocations} / {locations.length}</Text>
+              <Text style={styles.pointsValue}>{visitedLocationIds.size} / {locations.length}</Text>
             </View>
           </View>
         )}
       </View>
 
       <View style={styles.locationsList}>
-        <Text style={styles.sectionTitle}>Locations in Project</Text>
+        <Text style={styles.locationListTitle}>Locations in Project</Text>
         {locations.length > 0 ? (
           locations.map((location) => (
             <View key={location.id} style={styles.locationCard}>
@@ -146,7 +180,9 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
                   strong: { fontWeight: 'bold' }
                 }}
               />
-              <Text style={styles.participantCount}>Participants Visited: 0</Text>
+              <Text style={styles.participantCount}>
+                Participants Visited: {visitCounts[location.id]}
+              </Text>
             </View>
           ))
         ) : (
@@ -170,9 +206,10 @@ const styles = StyleSheet.create({
   pointsTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   pointsValue: { color: '#fff', fontSize: 20, marginTop: 4 },
   error: { color: 'red', textAlign: 'center', marginTop: 20 },
-  locationItem: { fontSize: 16, marginVertical: 4, color: '#555' },
   locationsList: { marginTop: 20 },
+  locationListTitle: { fontSize: 22, fontWeight: 'bold', color: '#81A6C7', marginBottom: 8 },
+  locationItem: { fontSize: 16, marginVertical: 4, color: '#555' },
   locationCard: { backgroundColor: '#B0CBE9', borderRadius: 8, padding: 16, marginBottom: 10 },
-  locationTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  participantCount: { fontSize: 12, color: '#888' },
+  locationTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+  participantCount: { fontSize: 14, color: '#fff' },
 });

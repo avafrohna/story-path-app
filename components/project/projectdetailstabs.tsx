@@ -4,14 +4,17 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import ProjectDetails from './projectdetails';
 import MapScreen from './map';
 import QRCodeScanner from './qrcode';
+import { useUser } from '../usercontext';
 
 const Tab = createBottomTabNavigator();
 
-type ProjectDetailsProps = {
+type ProjectDetailsTabsProps = {
   projectId: string;
 };
 
-export default function ProjectDetailsTabs({ projectId }: ProjectDetailsProps) {
+export default function ProjectDetailsTabs({ projectId }: ProjectDetailsTabsProps) {
+  const { username } = useUser();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -50,7 +53,9 @@ export default function ProjectDetailsTabs({ projectId }: ProjectDetailsProps) {
           ),
         }}
       >
-        {() => <MapScreen projectId={projectId} />}
+        {() => (
+          <MapScreen projectId={projectId} />
+        )}
       </Tab.Screen>
       <Tab.Screen
         name="QRCodeScanner"

@@ -20,7 +20,7 @@ export default function QRCodeScanner() {
     );
   }
 
-  const handleBarCodeScanned = ({ data }) => {
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
     setScanned(true);
     setScannedData(data);
   };
@@ -43,38 +43,10 @@ export default function QRCodeScanner() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 10,
-  },
-  camera: {
-    flex: 1,
-  },
-  textOverlay: {
-    position: 'absolute',
-    bottom: 50,
-    width: '100%',
-    textAlign: 'center',
-    color: 'white',
-    fontSize: 18,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingVertical: 10,
-  },
-  scanResultContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    padding: 15,
-  },
-  scanResultText: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
+  container: { flex: 1, justifyContent: 'center', backgroundColor: '#fff' },
+  message: { textAlign: 'center', paddingBottom: 10 },
+  camera: { flex: 1 },
+  textOverlay: { position: 'absolute', bottom: 50, width: '100%', textAlign: 'center', color: 'white', fontSize: 18, backgroundColor: 'rgba(0, 0, 0, 0.5)', paddingVertical: 10 },
+  scanResultContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white', padding: 15 },
+  scanResultText: { fontSize: 16, marginBottom: 10 },
 });

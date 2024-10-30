@@ -20,28 +20,8 @@ export default function UserContent(props: DrawerContentComponentProps) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  appName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#81A6C7',
-    marginLeft: 8,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  username: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#666',
-  },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#ddd' },
+  appName: { fontSize: 18, fontWeight: 'bold', color: '#81A6C7', marginLeft: 8 },
+  userInfo: { flexDirection: 'row', alignItems: 'center', padding: 16 },
+  username: { marginLeft: 8, fontSize: 14, color: '#666' },
 });
