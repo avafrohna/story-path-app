@@ -22,7 +22,6 @@ export default function ProjectDetails({ projectId }: ProjectID) {
 
   const [project, setProject] = useState<Project | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [visitedLocations, setVisitedLocations] = useState<Location[]>([]);
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
   const [participantCounts, setParticipantCounts] = useState<{ [locationId: string]: number }>({});
 
@@ -98,7 +97,6 @@ export default function ProjectDetails({ projectId }: ProjectID) {
       const visitedLocations = projectLocations.filter(location => visitedIds.has(location.id));
 
       // Set all data
-      setVisitedLocations(visitedLocations);
       setVisitedLocationIds(visitedIds);
       setCurrentScore(visitedLocations.reduce((acc, location) => acc + location.score_points, 0));
     } 
