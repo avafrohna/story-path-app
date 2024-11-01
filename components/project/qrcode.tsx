@@ -3,11 +3,10 @@ import { View, Text, Button, StyleSheet, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useUser } from '../usercontext';
 import { trackVisit, getLocation, getUserTrackingEntries } from '../../api';
-import { useNavigation } from '@react-navigation/native';
 import { Location } from '@/types/types';
 
 type QRScreenProps = {
-  projectId: string;
+  projectId: number;
 };
 
 export default function QRCodeScanner({ projectId }: QRScreenProps) {
@@ -17,7 +16,6 @@ export default function QRCodeScanner({ projectId }: QRScreenProps) {
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
   const [locationName, setLocationName] = useState('');
   const { username } = useUser();
-  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchTrackingEntries = async () => {
@@ -29,7 +27,6 @@ export default function QRCodeScanner({ projectId }: QRScreenProps) {
         setVisitedLocationIds(visitedIds);
       }
       catch (error) {
-        Alert.alert("Error", "Failed to fetch tracking data.");
         console.error("Error fetching tracking entries:", error);
       }
     };
@@ -61,30 +58,17 @@ export default function QRCodeScanner({ projectId }: QRScreenProps) {
 
       setLocationName(location[0].location_name);
 
-      if (visitedLocationIds.has(location[0].id)) {
-        console.log("Did not track");
-        return;
-      }
-      if (username) {
-        trackVisit(projectId, locationId, username, location[0].score_points)
-          .then(() => {
-            setVisitedLocationIds(prevVisited => new Set(prevVisited).add(location[0].id));
-          })
-          .catch(error => console.error("Error tracking visit:", error));
-      } 
-      else {
-        Alert.alert(
-          "User Login Required",
-          "You must log in or create a profile to track project details.",
-          [
-            { text: "Cancel", style: "cancel" },
-          ],
-          { cancelable: true }
-        );
-      }
+      if (!username) return;
+      if (visitedLocationIds.has(location[0].id)) return;
+
+      trackVisit(projectId.toString(), locationId, username, location[0].score_points)
+        .then(() => {
+          setVisitedLocationIds(prevVisited => new Set(prevVisited).add(location[0].id));
+        })
+        .catch(error => console.error("Error tracking visit:", error));
     } 
     else {
-      Alert.alert("Invalid QR Code", "This QR code is not valid for location tracking.");
+      console.error("Invalid QR Code", "This QR code is not valid for location tracking.");
     }
   };
 

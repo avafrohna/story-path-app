@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, Alert, ActivityIndicator } from 'react-native';
 import { getLocations, getUserTrackingEntries, trackVisit } from '../../api';
 import { useUser } from '../usercontext';
 import MapView, { Circle, UserLocationChangeEvent } from 'react-native-maps';
 import { Location, Region, Project } from '@/types/types';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 
 type MapScreenProps = {
-  projectId: string;
+  projectId: number;
 };
 
 export default function MapScreen({ projectId }: MapScreenProps) {
@@ -19,18 +20,16 @@ export default function MapScreen({ projectId }: MapScreenProps) {
   const { username } = useUser();
   const navigation = useNavigation();
 
-  useEffect(() => {
+  useFocusEffect(
+    useCallback(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
         const allLocations = await getLocations();
-        console.log("All locations fetched:", allLocations);
-
         const projectLocations = allLocations.filter(
           (location: Location) => location.project_id === projectId
         );
-        console.log("Project-specific locations:", projectLocations);
 
         if (projectLocations.length > 0) {
           const [latitude, longitude] = projectLocations[0].location_position
@@ -66,7 +65,7 @@ export default function MapScreen({ projectId }: MapScreenProps) {
     };
 
     fetchData();
-  }, [projectId, username]);
+  }, [projectId, username]));
 
   const parseCoordinates = (position: string) => {
     const [latitude, longitude] = position.replace(/[()]/g, '').split(',').map(Number);
@@ -97,7 +96,7 @@ export default function MapScreen({ projectId }: MapScreenProps) {
           }
           else {
             console.log("Tracking visit for location:", location.id);
-            trackVisit(projectId, location.id.toString(), username, location.score_points)
+            trackVisit(projectId.toString(), location.id.toString(), username, location.score_points)
               .then(() => {
                 setVisitedLocationIds(prevVisited => new Set(prevVisited).add(location.id));
                 setVisitedLocations(prev => [...prev, location]);
@@ -106,7 +105,8 @@ export default function MapScreen({ projectId }: MapScreenProps) {
           }
         }
       });
-    } else {
+    } 
+    else {
       console.warn("User location coordinate is undefined.");
     }
   };

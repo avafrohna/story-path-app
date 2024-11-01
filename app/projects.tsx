@@ -1,16 +1,16 @@
-import { Project } from '@/types/types';
+import { Project, ProjectCount } from '@/types/types';
 import { useUser } from '../components/usercontext';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getProjects, getTrackingEntriesForProject } from '../api';
+import { getProjects, getTrackingEntriesForProject, getProjectCount } from '../api';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import ProjectDetailsTabs from '@/components/project/projectdetailstabs';
 
 type RootStackParamList = {
   Projects: undefined;
-  ProjectDetails: { projectId: string };
+  ProjectDetails: { projectId: number };
   profile: undefined;
 };
 
@@ -23,7 +23,7 @@ export default function Projects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [participantCounts, setParticipantCounts] = useState<{ [key: string]: number }>({});
-  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState<number>();
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -46,12 +46,17 @@ export default function Projects() {
 
     const fetchParticipantCounts = async (projects: Project[]) => {
       const counts: { [key: string]: number } = {};
-
+    
       await Promise.all(
         projects.map(async (project) => {
-          const trackingEntries = (await getTrackingEntriesForProject(project.id)) as { participant_username: string }[];
-          const uniqueParticipants = new Set(trackingEntries.map(entry => entry.participant_username));
-          counts[project.id] = uniqueParticipants.size;
+          const count = await getProjectCount(project.id) as ProjectCount[];
+    
+          if (count.length > 0) {
+            counts[project.id] = count[0].number_participants;
+          } 
+          else {
+            counts[project.id] = 0;
+          }
         })
       );
 
@@ -67,7 +72,7 @@ export default function Projects() {
     return unsubscribe;
   }, [navigation]);
 
-  const handleProjectPress = (projectId: string) => {
+  const handleProjectPress = (projectId: number) => {
     if (!username) {
       Alert.alert(
         "User Login Required",

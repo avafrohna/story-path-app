@@ -1,16 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
-import { getProject, getLocations, getTrackingEntries, getAllTrackingEntries, getUserTrackingEntries } from '../../api';
+import { getProject, getLocations, getUserTrackingEntries, getLocationCount } from '../../api';
 import RenderHtml from 'react-native-render-html';
 import { useUser } from '../usercontext';
-import { Location, Project } from '@/types/types';
+import { Location, Project, LocationCount } from '@/types/types';
+import { useFocusEffect } from '@react-navigation/native';
 
 type ProjectDetailsProps = {
-  projectId: string;
-};
-
-type TrackingEntry = {
-  participant_username: string;
+  projectId: number;
 };
 
 export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
@@ -18,86 +15,72 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [visitCounts, setVisitCounts] = useState<{ [locationId: string]: number }>({});
+  const [participantCounts, setParticipantCounts] = useState<{ [locationId: string]: number }>({});
   const [currentScore, setCurrentScore] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
-  const [currentNumLocations, setCurrentNumLocations] = useState(0);
   const { width } = useWindowDimensions();
   const { username } = useUser();
   const [visitedLocations, setVisitedLocations] = useState<Location[]>([]);
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
 
-  useEffect(() => {
-    const fetchProjectData = async () => {
-      try {
-        setLoading(true);
+  useFocusEffect(
+    useCallback(() => {
+      const fetchProjectData = async () => {
+        try {
+          setLoading(true);
 
-        const allTrackingEntries = await getAllTrackingEntries();
-        console.log("All tracking entries:", allTrackingEntries);
+          const projectData = await getProject(projectId.toString()) as Project[];
+          setProject(projectData[0]);
 
-        const projectData = await getProject(projectId) as Project[];
-        setProject(projectData[0]);
+          const locationsData = await getLocations() as Location[];
+          const projectLocations = locationsData.filter((location) => location.project_id === projectId);
+          setLocations(projectLocations);
 
-        const locationsData = await getLocations() as Location[];
-        const projectLocations = locationsData.filter((location) => location.project_id === projectId);
-        setLocations(projectLocations);
+          if (projectData[0].participant_scoring !== 'Not Scored') {
+            const score = projectLocations.reduce((acc, loc) => acc + loc.score_points, 0);
+            setTotalScore(score);
+          }
 
-        if (projectData[0].participant_scoring !== 'Not Scored') {
-          const score = projectLocations.reduce((acc, loc) => acc + loc.score_points, 0);
-          setTotalScore(score);
+          const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
+          const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
+          const visitedLocations = projectLocations.filter(location => visitedIds.has(location.id));
+
+          setVisitedLocations(visitedLocations);
+          setVisitedLocationIds(visitedIds);
+
+          await fetchVisitCountsForLocations(projectLocations);
+
+          setLoading(false);
+        } 
+        catch (err) {
+          setError(`Error fetching project details: ${(err as Error).message}`);
+          setLoading(false);
         }
+      };
 
-        const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
-        console.log("User-specific tracking entries:", trackingEntries);
-
-        const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
-        console.log("Visited location IDs:", Array.from(visitedIds));
-
-        const visitedLocations = projectLocations.filter(location => visitedIds.has(location.id));
-        console.log("Filtered visited locations:", visitedLocations);
-
-        setVisitedLocations(visitedLocations);
-        setVisitedLocationIds(visitedIds);
-
-        await fetchVisitCountsForLocations(projectLocations);
-
-        setLoading(false);
-      } 
-      catch (err) {
-        setError(`Error fetching project details: ${(err as Error).message}`);
-        setLoading(false);
+      if (projectId) {
+        fetchProjectData();
       }
-    };
-
-    if (projectId) {
-      fetchProjectData();
-    }
-  }, [projectId]);
+    }, [projectId])
+  );
 
   const fetchVisitCountsForLocations = async (locations: Location[]) => {
     const counts: { [locationId: string]: number } = {};
 
     await Promise.all(
       locations.map(async (location) => {
-        try {
-          const trackingEntries = (await getTrackingEntries(projectId, null, location.id)) as TrackingEntry[] || [];
-          
-          console.log(`Tracking entries for location ${location.id}:`, trackingEntries);
+        const count = await getLocationCount(location.id) as LocationCount[];
 
-          const uniqueParticipants = new Set(trackingEntries.map(entry => entry.participant_username));
-          
-          console.log(`Unique participants for location ${location.id}:`, Array.from(uniqueParticipants));
-
-          counts[location.id] = uniqueParticipants.size;
+        if (count.length > 0) {
+          counts[location.id] = count[0].number_participants;
         } 
-        catch (error) {
-          console.error(`Error fetching visit count for location ${location.id}:`, error);
+        else {
+          counts[location.id] = 0;
         }
       })
     );
 
-    console.log("Final visit counts:", counts);
-    setVisitCounts(counts);
+    setParticipantCounts(counts);
   };
 
   const calculateCurrentScore = () => {
@@ -189,7 +172,7 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
                 }}
               />
               <Text style={styles.participantCount}>
-                Participants Visited: {visitCounts[location.id]}
+                Participants Visited: {participantCounts[location.id]}
               </Text>
             </View>
           ))

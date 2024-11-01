@@ -1,6 +1,6 @@
 export type Location = {
   id: number;
-  project_id: string;
+  project_id: number;
   location_name: string;
   location_content: string;
   clue: string;
@@ -17,7 +17,7 @@ export type Region = {
 };
 
 export type Project = {
-  id: string;
+  id: number;
   title: string;
   description: string;
   is_published: boolean;
@@ -27,7 +27,13 @@ export type Project = {
   homescreen_display: string;
 };
 
-export type Count = {
-  project_id: string;
-  number_participants: string;
+export type ProjectCount = {
+  project_id: number;
+  number_participants: number;
+}
+
+export type LocationCount = {
+  project_id: number;
+  location_id: number;
+  number_participants: number;
 }

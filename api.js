@@ -167,18 +167,7 @@ export async function getTrackingEntries(projectId, participantUsername, locatio
   }
 }
 
-export async function getProjectCount() {
-  try {
-    const response = await apiRequest(`/project_participant_counts`);
-    return response;
-  } 
-  catch (error) {
-    console.error("Error fetching project counts:", error);
-    return [];
-  }
-}
-
-export async function getSpecificProjectCount(projectId) {
+export async function getProjectCount(projectId) {
   try {
     const response = await apiRequest(`/project_participant_counts?project_id=eq.${projectId}`);
     return response;
@@ -189,16 +178,13 @@ export async function getSpecificProjectCount(projectId) {
   }
 }
 
-export async function incrementProjectCount(projectId, count) {
+export async function getLocationCount(locationId) {
   try {
-    const newCount = count + 1;
-    const response = await apiRequest(`/project_participant_counts?project_id=eq.${projectId}`, 'PATCH', {
-      number_participants: newCount,
-    });
+    const response = await apiRequest(`/location_participant_counts?location_id=eq.${locationId}`);
     return response;
   } 
   catch (error) {
-    console.error("Error, unable to increment participant count:", error);
-    throw error;
+    console.error("Error fetching project counts:", error);
+    return [];
   }
 }
