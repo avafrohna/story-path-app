@@ -1,41 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import { useUser } from '../usercontext';
+import { Location, ProjectID, Project } from '@/types/types';
 import { View, Text, Button, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useUser } from '../usercontext';
 import { trackVisit, getLocation, getUserTrackingEntries, getProject } from '../../api';
-import { Location, ProjectID, Project } from '@/types/types';
-// implement project participant_scoring
+import React, { useState, useEffect } from 'react';
+
+/**
+ * QRCodeScanner component enables users to scan QR codes to track visits to project locations.
+ * Manages camera permissions, fetches tracking data, and processes scanned QR codes.
+ * 
+ * @component
+ * @param {Object} props - Component properties.
+ * @param {number} props.projectId - ID of the project to be tracked.
+ * @returns {JSX.Element} The QR code scanner view.
+ */
 export default function QRCodeScanner({ projectId }: ProjectID) {
+  const { username } = useUser();
   const [scanned, setScanned] = useState(false);
+
+  const [project, setProject] = useState<Project>();
+  const [locationName, setLocationName] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
-  const [locationName, setLocationName] = useState('');
-  const [project, setProject] = useState<Project>();
-  const { username } = useUser();
-
+  
+  // Fetch project and user tracking entries on mount
   useEffect(() => {
-    const fetchTrackingEntries = async () => {
-      if (!username) return;
-
-      try {
-        const projectData = await getProject(projectId.toString()) as Project[];
-        setProject(projectData[0]);
-        const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
-        const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
-        setVisitedLocationIds(visitedIds);
-      }
-      catch (error) {
-        console.error("Error fetching tracking entries:", error);
-      }
-    };
-
-    fetchTrackingEntries();
+    fetchProjectData();
   }, [projectId, username]);
 
+  /**
+   * Fetches tracking entries and project data to determine visited locations.
+   * Updates state with fetched data.
+   */
+  const fetchProjectData = async () => {
+    // If no username, exit
+    if (!username) return;
+
+    try {
+      // Fetch project data
+      const projectData = await getProject(projectId.toString()) as Project[];
+      setProject(projectData[0]);
+
+      // Fetch all tracking entries for user
+      const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
+      // Select id's for all visited location from tracking entries
+      const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
+      setVisitedLocationIds(visitedIds);
+    }
+    catch (error) {
+      console.error("Error fetching tracking entries:", error);
+    }
+  };
+
+  // If no permission display error
   if (!permission) {
     return <View style={styles.container}><Text>Requesting permissions...</Text></View>;
   }
 
+  // Ask user for permission for camera access
   if (!permission.granted) {
     return (
       <View style={styles.container}>
@@ -45,44 +67,62 @@ export default function QRCodeScanner({ projectId }: ProjectID) {
     );
   }
 
+  /**
+   * Handles scanning of QR codes. Parses location ID from the scanned data
+   * and tracks visit if conditions are met (not previously visited, etc.).
+   * 
+   * @param {Object} data - The data from the QR code scan.
+   */
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     setScanned(true);
     
+    // Match scanned data to specific pattern
     const match = data.match(/\/location\/(\d+)/);
-    if (match && match[1]) {
-      const locationId = match[1];
+    // If id doesn't match, display error
+    if (!match || !match[1]) {
+      console.error("Invalid QR Code.");
+      return;
+    }
+
+    // Extract location ID
+    const locationId = match[1];
+
+    try {
+      // Fetch location data
       const location = await getLocation(locationId) as Location[];
+      if (!location || location.length === 0) {
+        console.error("Location not found.");
+        return;
+      }
 
       setLocationName(location[0].location_name);
 
+      // If no username exit
       if (!username) return;
+      // If already visited exit
       if (visitedLocationIds.has(location[0].id)) return;
-      if (project?.participant_scoring === 'Number of Locations Entered') {
-        console.log("Nope");
-        return;
-      }
-      if (location[0].location_trigger === 'Location Entry') {
-        return;
-      }
+      // If trigger is location entry exit
+      if (location[0].location_trigger === 'Location Entry') return;
 
-      console.log("Tracking visit for location:", location[0].id);
+      // Track the visit for location
       trackVisit(projectId.toString(), locationId, username, location[0].score_points)
         .then(() => {
           setVisitedLocationIds(prevVisited => new Set(prevVisited).add(location[0].id));
         })
-        .catch(error => console.error("Error tracking visit:", error));
-    } 
-    else {
-      console.error("Invalid QR Code", "This QR code is not valid for location tracking.");
+    }
+    catch (error) {
+      console.error("Error tracking visit:", error);
     }
   };
 
+  // Display Scanner
   return (
     <View style={styles.container}>
       <CameraView 
         style={styles.camera}
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
       />
+      {/* Display scanned data. */}
       {scanned && (
         <View style={styles.scanResultContainer}>
           <Text style={styles.scanResultText}>Location: {locationName}</Text>
@@ -98,6 +138,7 @@ export default function QRCodeScanner({ projectId }: ProjectID) {
   );
 }
 
+// Styles for QR Scanner component
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', backgroundColor: '#fff' },
   message: { textAlign: 'center', paddingBottom: 10 },
