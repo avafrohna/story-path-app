@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useUser } from '../usercontext';
-import { trackVisit, getLocation, getUserTrackingEntries } from '../../api';
-import { Location, ProjectID } from '@/types/types';
-
+import { trackVisit, getLocation, getUserTrackingEntries, getProject } from '../../api';
+import { Location, ProjectID, Project } from '@/types/types';
+// implement project participant_scoring
 export default function QRCodeScanner({ projectId }: ProjectID) {
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
   const [locationName, setLocationName] = useState('');
+  const [project, setProject] = useState<Project>();
   const { username } = useUser();
 
   useEffect(() => {
@@ -17,6 +18,8 @@ export default function QRCodeScanner({ projectId }: ProjectID) {
       if (!username) return;
 
       try {
+        const projectData = await getProject(projectId.toString()) as Project[];
+        setProject(projectData[0]);
         const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
         const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
         setVisitedLocationIds(visitedIds);
@@ -54,7 +57,15 @@ export default function QRCodeScanner({ projectId }: ProjectID) {
 
       if (!username) return;
       if (visitedLocationIds.has(location[0].id)) return;
+      if (project?.participant_scoring === 'Number of Locations Entered') {
+        console.log("Nope");
+        return;
+      }
+      if (location[0].location_trigger === 'Location Entry') {
+        return;
+      }
 
+      console.log("Tracking visit for location:", location[0].id);
       trackVisit(projectId.toString(), locationId, username, location[0].score_points)
         .then(() => {
           setVisitedLocationIds(prevVisited => new Set(prevVisited).add(location[0].id));

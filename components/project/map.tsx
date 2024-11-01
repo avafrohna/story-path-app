@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, View, Alert, ActivityIndicator } from 'react-native';
-import { getLocations, getUserTrackingEntries, trackVisit } from '../../api';
+import { getLocations, getUserTrackingEntries, trackVisit, getProject } from '../../api';
 import { useUser } from '../usercontext';
 import MapView, { Circle, UserLocationChangeEvent } from 'react-native-maps';
-import { Location, Region, ProjectID } from '@/types/types';
+import { Location, Region, ProjectID, Project } from '@/types/types';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function MapScreen({ projectId }: ProjectID) {
@@ -11,50 +11,54 @@ export default function MapScreen({ projectId }: ProjectID) {
   const [visitedLocations, setVisitedLocations] = useState<Location[]>([]);
   const [region, setRegion] = useState<Region>();
   const [loading, setLoading] = useState(true);
+  const [project, setProject] = useState<Project>();
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
   const { username } = useUser();
 
   useFocusEffect(
     useCallback(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
+      const fetchData = async () => {
+        try {
+          setLoading(true);
 
-        const allLocations = await getLocations();
-        const projectLocations = allLocations.filter(
-          (location: Location) => location.project_id === projectId
-        );
+          const projectData = await getProject(projectId.toString()) as Project[];
+          setProject(projectData[0]);
 
-        if (projectLocations.length > 0) {
-          const [latitude, longitude] = projectLocations[0].location_position
-            .replace(/[()]/g, '')
-            .split(',')
-            .map(Number);
-          setRegion({
-            latitude,
-            longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          });
+          const allLocations = await getLocations();
+          const projectLocations = allLocations.filter(
+            (location: Location) => location.project_id === projectId
+          );
+
+          if (projectLocations.length > 0) {
+            const [latitude, longitude] = projectLocations[0].location_position
+              .replace(/[()]/g, '')
+              .split(',')
+              .map(Number);
+            setRegion({
+              latitude,
+              longitude,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            });
+          }
+
+          const trackingEntries = await getUserTrackingEntries(projectId, username) as { location_id: number }[];
+          const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
+          const visitedLocations = projectLocations.filter(location => visitedIds.has(location.id));
+
+          setLocations(projectLocations);
+          setVisitedLocations(visitedLocations);
+          setVisitedLocationIds(visitedIds);
+          setLoading(false);
+        } 
+        catch (error) {
+          setLoading(false);
         }
+      };
 
-        const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
-        const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
-        const visitedLocations = projectLocations.filter(location => visitedIds.has(location.id));
-
-        setLocations(projectLocations);
-        setVisitedLocations(visitedLocations);
-        setVisitedLocationIds(visitedIds);
-        setLoading(false);
-      } 
-      catch (error) {
-        Alert.alert('Error', 'Failed to fetch data.');
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [projectId, username]));
+      fetchData();
+    }, [projectId, username])
+  );
 
   const parseCoordinates = (position: string) => {
     const [latitude, longitude] = position.replace(/[()]/g, '').split(',').map(Number);
@@ -63,23 +67,28 @@ export default function MapScreen({ projectId }: ProjectID) {
 
   const handleUserLocationChange = (event: UserLocationChangeEvent) => {
     const coordinate = event.nativeEvent.coordinate;
-  
+
     if (coordinate) {
       const userLatitude = coordinate.latitude;
       const userLongitude = coordinate.longitude;
-  
+
       locations.forEach(location => {
+        if (project?.participant_scoring === 'Number of Scanned QR Codes') {
+          return;
+        }
+        if (location.location_trigger === 'QR Code Scans') {
+          return;
+        }
+
         const { latitude, longitude } = parseCoordinates(location.location_position);
         const distance = getDistance(userLatitude, userLongitude, latitude, longitude);
-  
-        if (distance < 4000 && !visitedLocationIds.has(location.id)) {
+
+        if (distance < 100 && !visitedLocationIds.has(location.id)) {
           if (!username) {
             Alert.alert(
               "User Login Required",
               "You must log in or create a profile to track project details.",
-              [
-                { text: "Cancel", style: "cancel" },
-              ],
+              [{ text: "Cancel", style: "cancel" }],
               { cancelable: true }
             );
           }
@@ -127,14 +136,13 @@ export default function MapScreen({ projectId }: ProjectID) {
         showsUserLocation={true}
         onUserLocationChange={handleUserLocationChange}
       >
-        {visitedLocations.map((location) => {
+        {(project?.homescreen_display === 'Display all locations' ? locations : visitedLocations).map((location) => {
           const { latitude, longitude } = parseCoordinates(location.location_position);
-          console.log("Rendering visited location on map:", location.id, location.location_name);
           return (
             <Circle
-              key={location.id}
+              key={`location-${location.id}`}
               center={{ latitude, longitude }}
-              radius={4000}
+              radius={100}
               strokeColor="rgba(0, 112, 255, 2)"
               fillColor="rgba(0, 112, 255, 0.2)"
             />

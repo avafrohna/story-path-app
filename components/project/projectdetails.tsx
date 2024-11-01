@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
 import { getProject, getLocations, getUserTrackingEntries, getLocationCount } from '../../api';
-import RenderHtml from 'react-native-render-html';
 import { useUser } from '../usercontext';
 import { Location, Project, LocationCount, ProjectID } from '@/types/types';
 import { useFocusEffect } from '@react-navigation/native';
-
+import { WebView } from 'react-native-webview';
+// implement project participant_scoring
 export default function ProjectDetails({ projectId }: ProjectID) {
   const [project, setProject] = useState<Project | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -14,7 +14,6 @@ export default function ProjectDetails({ projectId }: ProjectID) {
   const [participantCounts, setParticipantCounts] = useState<{ [locationId: string]: number }>({});
   const [currentScore, setCurrentScore] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
-  const { width } = useWindowDimensions();
   const { username } = useUser();
   const [visitedLocations, setVisitedLocations] = useState<Location[]>([]);
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
@@ -159,13 +158,14 @@ export default function ProjectDetails({ projectId }: ProjectID) {
           locations.map((location) => (
             <View key={location.id} style={styles.locationCard}>
               <Text style={styles.locationTitle}>{location.location_name}</Text>
-              <RenderHtml
-                contentWidth={width}
-                source={{ html: location.location_content || '<p>No content available.</p>' }}
-                tagsStyles={{
-                  p: { color: '#666', fontSize: 14 },
-                  strong: { fontWeight: 'bold' }
-                }}
+              {location.clue && (
+                <Text style={styles.clueText}>Clue: {location.clue}</Text>
+              )}
+              <WebView
+                style={styles.webView}
+                originWhitelist={['*']}
+                source={{ html: location.location_content }}
+                javaScriptEnabled={true}
               />
               <Text style={styles.participantCount}>
                 Participants Visited: {participantCounts[location.id]}
@@ -199,4 +199,6 @@ const styles = StyleSheet.create({
   locationCard: { backgroundColor: '#B0CBE9', borderRadius: 8, padding: 16, marginBottom: 10 },
   locationTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   participantCount: { fontSize: 14, color: '#fff' },
+  webView: { height: 30, marginVertical: 10, borderRadius: 2 },
+  clueText: { fontSize: 14, color: '#fff', marginBottom: 2, marginTop: 4 },
 });
