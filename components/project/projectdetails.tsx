@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
-import { getProject, getLocations, getUserTrackingEntries, getLocationCount } from '../../api';
 import { useUser } from '../usercontext';
-import { Location, Project, LocationCount, ProjectID } from '@/types/types';
-import { useFocusEffect } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
+import { useFocusEffect } from '@react-navigation/native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Location, Project, LocationCount, ProjectID } from '@/types/types';
+import { getProject, getLocations, getUserTrackingEntries, getLocationCount } from '../../api';
+import React, { useState, useCallback } from 'react';
 
 /**
  * ProjectDetails component displays details for a specific project.
@@ -140,88 +140,100 @@ export default function ProjectDetails({ projectId }: ProjectID) {
   // Display project homepage
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{project.title || 'No Title'}</Text>
-      </View>
-
-      <View style={styles.card}>
-        {/* Display instructions if available. */}
-        <Text style={styles.sectionTitle}>Instructions</Text>
-        <Text style={styles.description}>
-          {project.instructions || 'No Instructions Available.'}
-        </Text>
-
-        {/* Display clue or locations depending on homescreen_display. */}
-        {project.homescreen_display === 'Display all locations' ? (
-          <>
-            <Text style={styles.sectionTitle}>Locations</Text>
+      {/* Display loading. */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#81A6C7" style={styles.loading} />
+      ) : error ? (
+        // Display error message
+        <Text style={styles.error}>{error}</Text>
+      ) : project ? (
+        // Porject details displayed 
+        <>
+          <View style={styles.header}>
+            <Text style={styles.title}>{project.title || 'No Title'}</Text>
+          </View>
+  
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Instructions</Text>
+            <Text style={styles.description}>
+              {project.instructions || 'No Instructions Available.'}
+            </Text>
+  
+            {/* Display clue or locations depending on homescreen_display. */}
+            {project.homescreen_display === 'Display all locations' ? (
+              <>
+                <Text style={styles.sectionTitle}>Locations</Text>
+                {locations.length > 0 ? (
+                  locations.map((location, index) => (
+                    <Text key={index} style={styles.locationItem}>{location.location_name}</Text>
+                  ))
+                ) : (
+                  <Text style={styles.error}>No locations have been added.</Text>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>Initial Clue</Text>
+                <Text style={styles.clue}>
+                  {project.initial_clue || 'No Initial Clue Provided.'}
+                </Text>
+              </>
+            )}
+  
+            {/* Display visited locations and scoring. */}
+            {project.participant_scoring !== 'Not Scored' ? (
+              <View style={styles.pointsContainer}>
+                <View style={styles.pointsBox}>
+                  <Text style={styles.pointsTitle}>Points</Text>
+                  <Text style={styles.pointsValue}>{currentScore} / {totalScore}</Text>
+                </View>
+                <View style={styles.pointsBox}>
+                  <Text style={styles.pointsTitle}>Locations Visited</Text>
+                  <Text style={styles.pointsValue}>{visitedLocationIds.size} / {locations.length}</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.pointsContainer}>
+                <View style={styles.pointsBox}>
+                  <Text style={styles.pointsTitle}>Locations Visited</Text>
+                  <Text style={styles.pointsValue}>{visitedLocationIds.size} / {locations.length}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+  
+          {/* Display list of locations. */}
+          <View style={styles.locationsList}>
+            <Text style={styles.locationListTitle}>Locations in Project</Text>
             {locations.length > 0 ? (
-              locations.map((location, index) => (
-                <Text key={index} style={styles.locationItem}>{location.location_name}</Text>
+              locations.map((location) => (
+                <View key={location.id} style={styles.locationCard}>
+                  <Text style={styles.locationTitle}>{location.location_name}</Text>
+                  {/* Display clue if present. */}
+                  {location.clue && (
+                    <Text style={styles.clueText}>Clue: {location.clue}</Text>
+                  )}
+                  {/* Render html content. */}
+                  <WebView
+                    style={styles.webView}
+                    originWhitelist={['*']}
+                    source={{ html: location.location_content }}
+                    javaScriptEnabled={true}
+                  />
+                  {/* Display project participant count. */}
+                  <Text style={styles.participantCount}>
+                    Participants Visited: {participantCounts[location.id]}
+                  </Text>
+                </View>
               ))
             ) : (
-              <Text style={styles.error}>No locations have been added.</Text>
+              <Text style={styles.error}>No locations available for this project.</Text>
             )}
-          </>
-        ) : (
-          <>
-            <Text style={styles.sectionTitle}>Initial Clue</Text>
-            <Text style={styles.clue}>
-              {project.initial_clue || 'No Initial Clue Provided.'}
-            </Text>
-          </>
-        )}
-
-        {/* Display scoring and visited locations. */}
-        {project.participant_scoring !== 'Not Scored' ? (
-          <View style={styles.pointsContainer}>
-            <View style={styles.pointsBox}>
-              <Text style={styles.pointsTitle}>Points</Text>
-              <Text style={styles.pointsValue}>{currentScore} / {totalScore}</Text>
-            </View>
-            <View style={styles.pointsBox}>
-              <Text style={styles.pointsTitle}>Locations Visited</Text>
-              <Text style={styles.pointsValue}>{visitedLocationIds.size} / {locations.length}</Text>
-            </View>
           </View>
-        ) : (
-          <View style={styles.pointsContainer}>
-            <View style={styles.pointsBox}>
-              <Text style={styles.pointsTitle}>Locations Visited</Text>
-              <Text style={styles.pointsValue}>{visitedLocationIds.size} / {locations.length}</Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Display list of locations with information. */}
-      <View style={styles.locationsList}>
-        <Text style={styles.locationListTitle}>Locations in Project</Text>
-        {locations.length > 0 ? (
-          locations.map((location) => (
-            <View key={location.id} style={styles.locationCard}>
-              <Text style={styles.locationTitle}>{location.location_name}</Text>
-              {/* Display location clue if available. */}
-              {location.clue && (
-                <Text style={styles.clueText}>Clue: {location.clue}</Text>
-              )}
-              {/* Render html content. */}
-              <WebView
-                style={styles.webView}
-                originWhitelist={['*']}
-                source={{ html: location.location_content }}
-                javaScriptEnabled={true}
-              />
-              {/* Display location participant count. */}
-              <Text style={styles.participantCount}>
-                Participants Visited: {participantCounts[location.id]}
-              </Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.error}>No locations available for this project.</Text>
-        )}
-      </View>
+        </>
+      ) : (
+        <Text style={styles.error}>Project not found</Text>
+      )}
     </ScrollView>
   );
 }
@@ -229,6 +241,7 @@ export default function ProjectDetails({ projectId }: ProjectID) {
 // Styles for ProjectDetails component
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF', padding: 16 },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#81A6C7', padding: 16, borderRadius: 8, marginBottom: 16, alignItems: 'center' },
   title: { fontSize: 24, color: '#FFFFFF', fontWeight: 'bold' },
   card: { backgroundColor: '#fff', borderRadius: 8, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
