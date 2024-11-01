@@ -1,8 +1,17 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
-import { UserContext } from '@/types/types';
 
 // Create a context for managing user information.
 const UserContext = createContext<UserContext | undefined>(undefined);
+
+/**
+ * UserContext type defines the structure for user-related data in context.
+ */
+export type UserContext = {
+  username: string | null;
+  setUsername: (username: string) => void;
+  profilePicture: string | null;
+  setProfilePicture: (uri: string) => void;
+};
 
 /**
  * UserProvider component that provides user context to its children.
@@ -28,7 +37,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
  * Custom hook to access user context.
  * Throws an error if used outside of a UserProvider.
  * 
- * @returns {UserContextType} The context value with user data and setters.
+ * @returns {UserContext} The context value with user data and setters.
  * @throws Will throw an error if `useUser` is not wrapped within a `UserProvider`.
  */
 export const useUser = (): UserContext => {

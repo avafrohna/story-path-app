@@ -1,14 +1,4 @@
 /**
- * UserContext type defines the structure for user-related data in context.
- */
-export type UserContext = {
-  username: string | null;
-  setUsername: (username: string) => void;
-  profilePicture: string | null;
-  setProfilePicture: (uri: string) => void;
-};
-
-/**
  * Project type defines the structure for a project in the app.
  */
 export type Project = {
