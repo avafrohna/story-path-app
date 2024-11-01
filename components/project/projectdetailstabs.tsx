@@ -6,10 +6,21 @@ import MapScreen from './map';
 import QRCodeScanner from './qrcode';
 import { ProjectID } from '@/types/types';
 
+// Initialize bottom tabs
 const Tab = createBottomTabNavigator();
 
+/**
+ * ProjectDetailsTabs component sets up a bottom tab navigator
+ * for viewing project details, a map, and a QR code scanner.
+ * 
+ * @component
+ * @param {Object} props - Component properties.
+ * @param {number} props.projectId - Unique identifier for the project to be displayed in each tab.
+ * @returns {JSX.Element} The bottom tab navigator with ProjectDetails, MapScreen, and QRCodeScanner screens.
+ */
 export default function ProjectDetailsTabs({ projectId }: ProjectID) {
   return (
+    // Styling and settings for the tab navigator
     <Tab.Navigator
       screenOptions={{
         headerStyle: {
@@ -27,6 +38,7 @@ export default function ProjectDetailsTabs({ projectId }: ProjectID) {
         tabBarInactiveTintColor: '#cccccc',
       }}
     >
+      {/* Project Homepage Tab */}
       <Tab.Screen
         name="ProjectDetails"
         options={{
@@ -36,8 +48,10 @@ export default function ProjectDetailsTabs({ projectId }: ProjectID) {
           ),
         }}
       >
+        {/* Pass projectId as a prop component */}
         {() => <ProjectDetails projectId={projectId} />}
       </Tab.Screen>
+      {/* Map Screen Tab */}
       <Tab.Screen
         name="MapScreen"
         options={{
@@ -47,10 +61,10 @@ export default function ProjectDetailsTabs({ projectId }: ProjectID) {
           ),
         }}
       >
-        {() => (
-          <MapScreen projectId={projectId} />
-        )}
+        {/* Pass projectId as a prop component */}
+        {() => <MapScreen projectId={projectId} />}
       </Tab.Screen>
+      {/* QR Code Scanner Tab */}
       <Tab.Screen
         name="QRCodeScanner"
         options={{
@@ -60,9 +74,8 @@ export default function ProjectDetailsTabs({ projectId }: ProjectID) {
           ),
         }}
       >
-        {() => (
-          <QRCodeScanner projectId={projectId} />
-        )}
+        {/* Pass projectId as a prop component */}
+        {() => <QRCodeScanner projectId={projectId} />}
       </Tab.Screen>
     </Tab.Navigator>
   );
