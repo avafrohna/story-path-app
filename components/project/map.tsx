@@ -125,8 +125,6 @@ export default function MapScreen({ projectId }: ProjectID) {
     const userLongitude = coordinate.longitude;
 
     locations.forEach(location => {
-      // Skip if project is set to QR codes
-      if (project?.participant_scoring === 'Number of Scanned QR Codes') return;
       // Skip locations with QR code-only triggers
       if (location.location_trigger === 'QR Code Scans') return;
 
