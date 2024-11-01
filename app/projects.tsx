@@ -1,23 +1,14 @@
 import { Project, ProjectCount } from '@/types/types';
 import { useUser } from '../components/usercontext';
-import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getProjects, getTrackingEntriesForProject, getProjectCount } from '../api';
+import { getProjects, getProjectCount } from '../api';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import ProjectDetailsTabs from '@/components/project/projectdetailstabs';
-
-type RootStackParamList = {
-  Projects: undefined;
-  ProjectDetails: { projectId: number };
-  profile: undefined;
-};
-
-type ProjectsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Projects'>;
+import { useRouter } from 'expo-router';
 
 export default function Projects() {
-  const navigation = useNavigation<ProjectsScreenNavigationProp>();
+  const router = useRouter();
   const { username } = useUser();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,12 +56,8 @@ export default function Projects() {
 
     fetchProjects();
 
-    const unsubscribe = navigation.addListener('focus', () => {
-      setSelectedProjectId('');
-    });
-
-    return unsubscribe;
-  }, [navigation]);
+    return () => setSelectedProjectId(undefined);
+  }, []);
 
   const handleProjectPress = (projectId: number) => {
     if (!username) {
@@ -80,7 +67,7 @@ export default function Projects() {
         [
           {
             text: "Profile",
-            onPress: () => navigation.navigate("profile")
+            onPress: () => router.push('/profile')
           },
           { text: "Cancel", style: "cancel" },
         ],

@@ -3,14 +3,10 @@ import { View, Text, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensi
 import { getProject, getLocations, getUserTrackingEntries, getLocationCount } from '../../api';
 import RenderHtml from 'react-native-render-html';
 import { useUser } from '../usercontext';
-import { Location, Project, LocationCount } from '@/types/types';
+import { Location, Project, LocationCount, ProjectID } from '@/types/types';
 import { useFocusEffect } from '@react-navigation/native';
 
-type ProjectDetailsProps = {
-  projectId: number;
-};
-
-export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
+export default function ProjectDetails({ projectId }: ProjectID) {
   const [project, setProject] = useState<Project | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,24 +1,18 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, View, Alert, ActivityIndicator } from 'react-native';
 import { getLocations, getUserTrackingEntries, trackVisit } from '../../api';
 import { useUser } from '../usercontext';
 import MapView, { Circle, UserLocationChangeEvent } from 'react-native-maps';
-import { Location, Region, Project } from '@/types/types';
-import { useNavigation } from '@react-navigation/native';
+import { Location, Region, ProjectID } from '@/types/types';
 import { useFocusEffect } from '@react-navigation/native';
 
-type MapScreenProps = {
-  projectId: number;
-};
-
-export default function MapScreen({ projectId }: MapScreenProps) {
+export default function MapScreen({ projectId }: ProjectID) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [visitedLocations, setVisitedLocations] = useState<Location[]>([]);
   const [region, setRegion] = useState<Region>();
   const [loading, setLoading] = useState(true);
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
   const { username } = useUser();
-  const navigation = useNavigation();
 
   useFocusEffect(
     useCallback(() => {
@@ -45,13 +39,8 @@ export default function MapScreen({ projectId }: MapScreenProps) {
         }
 
         const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
-        console.log("User-specific tracking entries:", trackingEntries);
-
         const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
-        console.log("Visited location IDs:", Array.from(visitedIds));
-
         const visitedLocations = projectLocations.filter(location => visitedIds.has(location.id));
-        console.log("Filtered visited locations:", visitedLocations);
 
         setLocations(projectLocations);
         setVisitedLocations(visitedLocations);

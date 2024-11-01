@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, Button, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useUser } from '../usercontext';
 import { trackVisit, getLocation, getUserTrackingEntries } from '../../api';
-import { Location } from '@/types/types';
+import { Location, ProjectID } from '@/types/types';
 
-type QRScreenProps = {
-  projectId: number;
-};
-
-export default function QRCodeScanner({ projectId }: QRScreenProps) {
+export default function QRCodeScanner({ projectId }: ProjectID) {
   const [scanned, setScanned] = useState(false);
-  const [scannedData, setScannedData] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
   const [locationName, setLocationName] = useState('');
@@ -49,7 +44,6 @@ export default function QRCodeScanner({ projectId }: QRScreenProps) {
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     setScanned(true);
-    setScannedData(data);
     
     const match = data.match(/\/location\/(\d+)/);
     if (match && match[1]) {

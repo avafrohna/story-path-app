@@ -27,6 +27,10 @@ export type Project = {
   homescreen_display: string;
 };
 
+export type ProjectID = {
+  projectId: number;
+}
+
 export type ProjectCount = {
   project_id: number;
   number_participants: number;
