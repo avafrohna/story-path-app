@@ -119,6 +119,7 @@ export default function Projects() {
     >
       <View style={styles.projectInfo}>
         <Text style={styles.projectTitle}>{item.title}</Text>
+        {/* Display project participant count. */}
         <View style={styles.participantBadge}>
           <Text style={styles.participantBadgeText}>
             Participants: {participantCounts[item.id] || 0}
@@ -142,6 +143,7 @@ export default function Projects() {
           ) : error ? (
             <Text style={styles.error}>{error}</Text>
           ) : projects.length > 0 ? (
+            // Display each project
             <FlatList
               data={projects}
               keyExtractor={(item) => item.id.toString()}

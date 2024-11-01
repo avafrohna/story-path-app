@@ -5,100 +5,139 @@ import { useUser } from '../usercontext';
 import { Location, Project, LocationCount, ProjectID } from '@/types/types';
 import { useFocusEffect } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
-// implement project participant_scoring
+
+/**
+ * ProjectDetails component displays details for a specific project.
+ * Shows project instructions, locations, participant visit counts, and a scoring summary.
+ * 
+ * @component
+ * @param {Object} props - Component properties.
+ * @param {number} props.projectId - Unique identifier for the project.
+ * @returns {JSX.Element} The project details view with location information and scoring.
+ */
 export default function ProjectDetails({ projectId }: ProjectID) {
+  const { username } = useUser();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
   const [project, setProject] = useState<Project | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [participantCounts, setParticipantCounts] = useState<{ [locationId: string]: number }>({});
-  const [currentScore, setCurrentScore] = useState(0);
-  const [totalScore, setTotalScore] = useState(0);
-  const { username } = useUser();
   const [visitedLocations, setVisitedLocations] = useState<Location[]>([]);
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
+  const [participantCounts, setParticipantCounts] = useState<{ [locationId: string]: number }>({});
 
+  const [totalScore, setTotalScore] = useState(0);
+  const [currentScore, setCurrentScore] = useState(0);
+
+  // Reset visited locations when coming back to page
   useFocusEffect(
     useCallback(() => {
-      const fetchProjectData = async () => {
-        try {
-          setLoading(true);
-
-          const projectData = await getProject(projectId.toString()) as Project[];
-          setProject(projectData[0]);
-
-          const locationsData = await getLocations() as Location[];
-          const projectLocations = locationsData.filter((location) => location.project_id === projectId);
-          setLocations(projectLocations);
-
-          if (projectData[0].participant_scoring !== 'Not Scored') {
-            const score = projectLocations.reduce((acc, loc) => acc + loc.score_points, 0);
-            setTotalScore(score);
-          }
-
-          const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
-          const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
-          const visitedLocations = projectLocations.filter(location => visitedIds.has(location.id));
-
-          setVisitedLocations(visitedLocations);
-          setVisitedLocationIds(visitedIds);
-
-          await fetchVisitCountsForLocations(projectLocations);
-
-          setLoading(false);
-        } 
-        catch (err) {
-          setError(`Error fetching project details: ${(err as Error).message}`);
-          setLoading(false);
-        }
-      };
-
-      if (projectId) {
-        fetchProjectData();
-      }
+      fetchProjectData();
+      return () => setVisitedLocationIds(new Set());
     }, [projectId])
   );
 
-  const fetchVisitCountsForLocations = async (locations: Location[]) => {
-    const counts: { [locationId: string]: number } = {};
+  /**
+   * Fetches project data, locations, and participant counts.
+   * Sets loading and error states based on the success of each API call.
+   */
+  const fetchProjectData = async () => {
+    try {
+      setLoading(true);
+      setError('');
 
-    await Promise.all(
-      locations.map(async (location) => {
-        const count = await getLocationCount(location.id) as LocationCount[];
+      // Fetch project data
+      const projectData = await getProject(projectId.toString()) as Project[];
+      setProject(projectData[0]);
 
-        if (count.length > 0) {
-          counts[location.id] = count[0].number_participants;
-        } 
-        else {
-          counts[location.id] = 0;
-        }
-      })
-    );
+      // Fetch locations in project
+      const locationsData = await getLocations() as Location[];
+      const projectLocations = locationsData.filter((location) => location.project_id === projectId);
+      setLocations(projectLocations);
 
-    setParticipantCounts(counts);
+      // Fetch scoring if necessary
+      calculateTotalScore(projectData[0], projectLocations);
+      // Fetch visited locations
+      await fetchVisitedLocations(projectLocations);
+      await fetchCountsLocations(projectLocations);
+
+      setLoading(false);
+    }
+    catch (err) {
+      setError(`Error fetching projects: ${(err as Error).message}`);
+      setLoading(false);
+    }
   };
 
-  const calculateCurrentScore = () => {
-    let score = visitedLocations.reduce((acc, location) => acc + location.score_points, 0);
-    setCurrentScore(score);
+  /**
+   * Calculates the total score for all locations in the project.
+   *
+   * @param {Project} project - The current project.
+   * @param {Location[]} projectLocations - Array of locations associated with the project.
+   */
+  const calculateTotalScore = (project: Project, projectLocations: Location[]) => {
+    // If scoring is not 'Not Scored' set total score
+    if (project.participant_scoring !== 'Not Scored') {
+      const total = projectLocations.reduce((acc, loc) => acc + loc.score_points, 0);
+      setTotalScore(total);
+    }
   };
-  
-  useEffect(() => {
-    calculateCurrentScore();
-  }, [visitedLocations]);
 
-  if (loading) {
-    return <ActivityIndicator size="large" color="#81A6C7" />;
-  }
+  /**
+   * Fetches user tracking entries to determine visited locations and calculates current score.
+   *
+   * @param {Location[]} projectLocations - Array of project locations.
+   */
+  const fetchVisitedLocations = async (projectLocations: Location[]) => {
+    try {
+      // Fetch all tracking entries for user
+      const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
+      // Select id's for all visited location from tracking entries
+      const visitedIds = new Set(trackingEntries.map(entry => entry.location_id));
+      // Filter visited locations
+      const visitedLocations = projectLocations.filter(location => visitedIds.has(location.id));
 
-  if (error) {
-    return <Text style={styles.error}>{error}</Text>;
-  }
+      // Set all data
+      setVisitedLocations(visitedLocations);
+      setVisitedLocationIds(visitedIds);
+      setCurrentScore(visitedLocations.reduce((acc, location) => acc + location.score_points, 0));
+    } 
+    catch (error) {
+      console.error("Error fetching visited locations:", error);
+      setError('Error fetching visited locations.');
+    }
+  };
+
+  /**
+   * Fetches the participant counts for each location in the project.
+   *
+   * @param {Location[]} locations - Array of locations for which to fetch participant counts.
+   */
+  const fetchCountsLocations = async (locations: Location[]) => {
+    const counts: { [key: string]: number } = {};
+
+    try {
+      await Promise.all(
+        // Loop through locations
+        locations.map(async (location) => {
+          // Get number of participants for each location
+          const count = await getLocationCount(location.id) as LocationCount[];
+          counts[location.id] = count.length > 0 ? count[0].number_participants : 0;
+        })
+      );
+      setParticipantCounts(counts);
+    }
+    catch (error) {
+      console.error('Error fetching count for location: ', error);
+      setError('Error fetching count for locations.');
+    }
+  };
 
   if (!project) {
     return <Text style={styles.error}>Project not found</Text>;
   }
 
+  // Display project homepage
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -106,11 +145,13 @@ export default function ProjectDetails({ projectId }: ProjectID) {
       </View>
 
       <View style={styles.card}>
+        {/* Display instructions if available. */}
         <Text style={styles.sectionTitle}>Instructions</Text>
         <Text style={styles.description}>
           {project.instructions || 'No Instructions Available.'}
         </Text>
 
+        {/* Display clue or locations depending on homescreen_display. */}
         {project.homescreen_display === 'Display all locations' ? (
           <>
             <Text style={styles.sectionTitle}>Locations</Text>
@@ -131,6 +172,7 @@ export default function ProjectDetails({ projectId }: ProjectID) {
           </>
         )}
 
+        {/* Display scoring and visited locations. */}
         {project.participant_scoring !== 'Not Scored' ? (
           <View style={styles.pointsContainer}>
             <View style={styles.pointsBox}>
@@ -152,21 +194,25 @@ export default function ProjectDetails({ projectId }: ProjectID) {
         )}
       </View>
 
+      {/* Display list of locations with information. */}
       <View style={styles.locationsList}>
         <Text style={styles.locationListTitle}>Locations in Project</Text>
         {locations.length > 0 ? (
           locations.map((location) => (
             <View key={location.id} style={styles.locationCard}>
               <Text style={styles.locationTitle}>{location.location_name}</Text>
+              {/* Display location clue if available. */}
               {location.clue && (
                 <Text style={styles.clueText}>Clue: {location.clue}</Text>
               )}
+              {/* Render html content. */}
               <WebView
                 style={styles.webView}
                 originWhitelist={['*']}
                 source={{ html: location.location_content }}
                 javaScriptEnabled={true}
               />
+              {/* Display location participant count. */}
               <Text style={styles.participantCount}>
                 Participants Visited: {participantCounts[location.id]}
               </Text>
@@ -180,6 +226,7 @@ export default function ProjectDetails({ projectId }: ProjectID) {
   );
 }
 
+// Styles for ProjectDetails component
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF', padding: 16 },
   header: { backgroundColor: '#81A6C7', padding: 16, borderRadius: 8, marginBottom: 16, alignItems: 'center' },
