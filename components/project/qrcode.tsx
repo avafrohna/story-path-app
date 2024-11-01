@@ -1,9 +1,10 @@
 import { useUser } from '../usercontext';
+import { useFocusEffect } from '@react-navigation/native';
 import { Location, ProjectID, Project } from '@/types/types';
 import { View, Text, Button, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { trackVisit, getLocation, getUserTrackingEntries, getProject } from '../../api';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 /**
  * QRCodeScanner component enables users to scan QR codes to track visits to project locations.
@@ -18,11 +19,17 @@ export default function QRCodeScanner({ projectId }: ProjectID) {
   const { username } = useUser();
   const [scanned, setScanned] = useState(false);
 
-  const [project, setProject] = useState<Project>();
   const [locationName, setLocationName] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
   
+  // Reset `scanned` state when the component gains focus
+  useFocusEffect(
+    useCallback(() => {
+      setScanned(false);
+    }, [])
+  );
+
   // Fetch project and user tracking entries on mount
   useEffect(() => {
     fetchProjectData();
@@ -37,10 +44,6 @@ export default function QRCodeScanner({ projectId }: ProjectID) {
     if (!username) return;
 
     try {
-      // Fetch project data
-      const projectData = await getProject(projectId.toString()) as Project[];
-      setProject(projectData[0]);
-
       // Fetch all tracking entries for user
       const trackingEntries = (await getUserTrackingEntries(projectId, username)) as { location_id: number }[];
       // Select id's for all visited location from tracking entries
@@ -126,12 +129,6 @@ export default function QRCodeScanner({ projectId }: ProjectID) {
       {scanned && (
         <View style={styles.scanResultContainer}>
           <Text style={styles.scanResultText}>Location: {locationName}</Text>
-          <Button 
-            title="Tap to Scan Again" 
-            onPress={() => {
-              setTimeout(() => setScanned(false), 200);
-            }} 
-          />
         </View>
       )}
     </View>
