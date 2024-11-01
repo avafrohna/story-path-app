@@ -1,7 +1,7 @@
 import { useUser } from '../usercontext';
 import { useFocusEffect } from '@react-navigation/native';
 import { Location, Region, ProjectID, Project } from '@/types/types';
-import { StyleSheet, View, Alert, ActivityIndicator } from 'react-native';
+import { Text, StyleSheet, View, Alert, ActivityIndicator } from 'react-native';
 import { getLocations, getUserTrackingEntries, trackVisit, getProject } from '../../api';
 import React, { useState, useCallback } from 'react';
 import MapView, { Circle, UserLocationChangeEvent } from 'react-native-maps';
@@ -181,34 +181,38 @@ export default function MapScreen({ projectId }: ProjectID) {
     return R * c;
   };
 
-  // Display loading symbol
-  if (loading) {
-    return <ActivityIndicator size="large" color="#81A6C7" />;
-  }
-
   // Display project map
   return (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        initialRegion={region}
-        showsUserLocation={true}
-        onUserLocationChange={handleUserLocationChange}
-      >
-        {/* Depending on homescreen_display, display all locations or just visted ones. */}
-        {(project?.homescreen_display === 'Display all locations' ? locations : visitedLocations).map((location) => {
-          const { latitude, longitude } = parseCoordinates(location.location_position);
-          return (
-            <Circle
-              key={`location-${location.id}`}
-              center={{ latitude, longitude }}
-              radius={100}
-              strokeColor="rgba(0, 112, 255, 2)"
-              fillColor="rgba(0, 112, 255, 0.2)"
-            />
-          );
-        })}
-      </MapView>
+      {loading ? (
+        // Display activity symbol
+        <ActivityIndicator size="large" color="#81A6C7" style={styles.loading} />
+      ) : error ? (
+        // Display error message
+        <Text style={styles.error}>{error}</Text>
+      ) : (
+        // Display map
+        <MapView
+          style={styles.map}
+          initialRegion={region}
+          showsUserLocation={true}
+          onUserLocationChange={handleUserLocationChange}
+        >
+          {/* Depending on homescreen_display, display all locations or just visted ones. */}
+          {(project?.homescreen_display === 'Display all locations' ? locations : visitedLocations).map((location) => {
+            const { latitude, longitude } = parseCoordinates(location.location_position);
+            return (
+              <Circle
+                key={`location-${location.id}`}
+                center={{ latitude, longitude }}
+                radius={100}
+                strokeColor="rgba(0, 112, 255, 2)"
+                fillColor="rgba(0, 112, 255, 0.2)"
+              />
+            );
+          })}
+        </MapView>
+        )}
     </View>
   );
 }
@@ -217,4 +221,6 @@ export default function MapScreen({ projectId }: ProjectID) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: '100%', height: '100%' },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  error: { color: 'red', textAlign: 'center', marginTop: 20, fontSize: 16 },
 });
