@@ -1,6 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
+/**
+ * About component that provides information about the Story Path app.
+ * Displays a brief description of the app's purpose and features.
+ * 
+ * @component
+ * @returns {JSX.Element} A view with textual information about the application.
+ */
 export default function About() {
   return (
     <View style={styles.container}>
@@ -15,6 +22,7 @@ export default function About() {
   );
 }
 
+// Styles for the About component
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 30, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa' },
   header: { fontSize: 28, fontWeight: 'bold', color: '#333', marginBottom: 20, textAlign: 'center' },
