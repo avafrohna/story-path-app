@@ -100,6 +100,15 @@ export default function ProjectDetails({ projectId }: ProjectDetailsProps) {
     setVisitCounts(counts);
   };
 
+  const calculateCurrentScore = () => {
+    let score = visitedLocations.reduce((acc, location) => acc + location.score_points, 0);
+    setCurrentScore(score);
+  };
+  
+  useEffect(() => {
+    calculateCurrentScore();
+  }, [visitedLocations]);
+
   if (loading) {
     return <ActivityIndicator size="large" color="#81A6C7" />;
   }

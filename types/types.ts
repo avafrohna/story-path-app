@@ -26,3 +26,8 @@ export type Project = {
   participant_scoring: string;
   homescreen_display: string;
 };
+
+export type Count = {
+  project_id: string;
+  number_participants: string;
+}

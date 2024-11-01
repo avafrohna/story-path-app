@@ -4,6 +4,7 @@ import { getLocations, getUserTrackingEntries, trackVisit } from '../../api';
 import { useUser } from '../usercontext';
 import MapView, { Circle, UserLocationChangeEvent } from 'react-native-maps';
 import { Location, Region, Project } from '@/types/types';
+import { useNavigation } from '@react-navigation/native';
 
 type MapScreenProps = {
   projectId: string;
@@ -16,6 +17,7 @@ export default function MapScreen({ projectId }: MapScreenProps) {
   const [loading, setLoading] = useState(true);
   const [visitedLocationIds, setVisitedLocationIds] = useState(new Set<number>());
   const { username } = useUser();
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,13 +85,25 @@ export default function MapScreen({ projectId }: MapScreenProps) {
         const distance = getDistance(userLatitude, userLongitude, latitude, longitude);
   
         if (distance < 4000 && !visitedLocationIds.has(location.id)) {
-          console.log("hello");
-          trackVisit(projectId, location.id.toString(), username ?? '', location.score_points)
-            .then(() => {
-              setVisitedLocationIds(prevVisited => new Set(prevVisited).add(location.id));
-              setVisitedLocations(prev => [...prev, location]);
-            })
-            .catch(error => console.error("Error tracking visit:", error));
+          if (!username) {
+            Alert.alert(
+              "User Login Required",
+              "You must log in or create a profile to track project details.",
+              [
+                { text: "Cancel", style: "cancel" },
+              ],
+              { cancelable: true }
+            );
+          }
+          else {
+            console.log("Tracking visit for location:", location.id);
+            trackVisit(projectId, location.id.toString(), username, location.score_points)
+              .then(() => {
+                setVisitedLocationIds(prevVisited => new Set(prevVisited).add(location.id));
+                setVisitedLocations(prev => [...prev, location]);
+              })
+              .catch(error => console.error("Error tracking visit:", error));
+          }
         }
       });
     } else {

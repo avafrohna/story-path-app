@@ -59,14 +59,17 @@ export default function ProjectDetailsTabs({ projectId }: ProjectDetailsTabsProp
       </Tab.Screen>
       <Tab.Screen
         name="QRCodeScanner"
-        component={QRCodeScanner}
         options={{
           title: "QR Code Scanner",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="qr-code-scanner" color={color} size={size} />
           ),
         }}
-      />
+      >
+        {() => (
+          <QRCodeScanner projectId={projectId} />
+        )}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }
